@@ -1,0 +1,5 @@
+cyzera.db
+cyzera.db-wal
+cyzera.db-shm
+FIRST_RUN_PASSWORD.txt
+__pycache__/
