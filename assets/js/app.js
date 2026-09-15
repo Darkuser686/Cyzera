@@ -179,7 +179,7 @@
   /* ---------------------------------------------------------------
      Router
   --------------------------------------------------------------- */
-  var ROUTES = ['home', 'about', 'team', 'events', 'register', 'admin'];
+  var ROUTES = ['home', 'about', 'team', 'hod', 'events', 'register', 'admin'];
 
   /* The admin route is not reachable by typing the URL. It opens only after
      the Ctrl+Shift+A gesture, which sets a flag for this tab. This is
@@ -222,6 +222,7 @@
       about: 'About Us — CYZERA',
       team: 'Team — CYZERA',
       events: 'Our Events — CYZERA',
+      hod: "HOD's Message — CYZERA",
       register: 'Registrations — CYZERA',
       admin: 'Admin — CYZERA'
     };

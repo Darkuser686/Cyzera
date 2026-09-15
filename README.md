@@ -69,12 +69,13 @@ DEPLOY-GITHUB.md                publishing on GitHub Pages
 
 ### Pages
 
-`#/` Home · `#/about` About Us · `#/team` Team · `#/events` Our Events ·
-`#/register` Registrations · `#/admin` Admin *(unlisted, shortcut only)*
+`#/` Home · `#/about` About Us · `#/team` Team · `#/hod` HOD's Message ·
+`#/events` Our Events · `#/register` Registrations · `#/admin` Admin *(unlisted, shortcut only)*
 
-The Team page has four groups: **The people who started CYZERA** (Secretary,
-Vice President, Treasurer), **The people running CYZERA** (Executive Head, Team
-Coordinator), **Our Media Team**, and **Digital Author**.
+The Team page has five groups: **From the Department** (HOD, Mentor), **The
+people who started CYZERA** (Secretary, Vice President, Treasurer), **The people
+running CYZERA** (Executive Head, Team Coordinator), **Our Media Team**, and
+**Digital Author**.
 
 ---
 
@@ -95,7 +96,7 @@ Coordinator), **Our Media Team**, and **Digital Author**.
 - The hero and nav mark is the **real circuit-C artwork** with its black ground
   keyed to transparency. The rotating light arc and scan line are `mask-image`d
   to the mark's own alpha, so light falls only on the artwork.
-- `styles.css` and the scripts carry a `?v=4` query. **Bump that number when you
+- `styles.css` and the scripts carry a `?v=6` query. **Bump that number when you
   edit them**, or browsers keep running the previous version after a deploy —
   which looks exactly like a broken site.
 - `prefers-reduced-motion` is respected throughout.
