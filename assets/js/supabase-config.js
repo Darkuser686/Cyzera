@@ -17,6 +17,6 @@
    ============================================================ */
 
 window.CYZERA_SUPABASE = {
-  url: '',      // e.g. 'https://abcdefghijklm.supabase.co'
-  anonKey: ''   // e.g. 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+  url: 'https://jynxbhnmmipiuwsugwcf.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5bnhiaG5tbWlwaXV3c3Vnd2NmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3NDExOTksImV4cCI6MjEwNTMxNzE5OX0.e18YKtrsi3JGF6mJ4RwmbokOzsdJFPC9EjH3Pm5ozjA'
 };
