@@ -200,6 +200,9 @@
   function routeFromHash() {
     var h = (location.hash || '#/').replace(/^#\/?/, '').split('?')[0];
     routeParam = '';
+    /* Phone-friendly way in: visiting #/admin-login unlocks the panel,
+       no keyboard shortcut needed. Bookmark it. */
+    if (h === 'admin-login') { unlockAdmin(); h = 'admin'; }
     if (h === 'admin' && !adminUnlocked()) return 'home';
     /* #/register/<event-id> opens one event's page (database mode only) */
     var m = /^register\/([\w.-]+)$/.exec(h);
