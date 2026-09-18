@@ -142,7 +142,7 @@ running CYZERA** (Executive Head, Team Coordinator), **Our Media Team**, and
 - The hero and nav mark is the **real circuit-C artwork** with its black ground
   keyed to transparency. The rotating light arc and scan line are `mask-image`d
   to the mark's own alpha, so light falls only on the artwork.
-- `styles.css` and the scripts carry a `?v=10` query. **Bump that number when you
+- `styles.css` and the scripts carry a `?v=12` query. **Bump that number when you
   edit them**, or browsers keep running the previous version after a deploy —
   which looks exactly like a broken site.
 - `prefers-reduced-motion` is respected throughout.

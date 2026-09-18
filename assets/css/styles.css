@@ -1500,6 +1500,8 @@ h1, h2, h3, h4 {
 }
 
 /* ---- Poster lightbox ---- */
+.lightbox[hidden] { display: none; }
+
 .lightbox {
   position: fixed;
   inset: 0;
