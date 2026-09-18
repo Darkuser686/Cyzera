@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="assets/css/styles.css?v=7">
+<link rel="stylesheet" href="assets/css/styles.css?v=8">
 </head>
 
 <body>
@@ -822,11 +822,28 @@
 </section>
 
 <!-- ==================================================================
+     EVENT — one event's page with its registration form (database mode)
+     ================================================================== -->
+<section class="view" id="view-event">
+  <section class="section" style="padding-top:calc(var(--nav-h) + 3rem)">
+    <div class="shell">
+      <div id="eventDetail"><!-- rendered by registrations.js --></div>
+    </div>
+  </section>
+</section>
+
+<!-- ==================================================================
      ADMIN
      ================================================================== -->
 <section class="view" id="view-admin">
   <section class="section" style="padding-top:calc(var(--nav-h) + 4rem)">
     <div class="shell">
+
+      <!-- Database mode (Supabase configured): registrations.js renders here -->
+      <div id="adminSupabase" hidden></div>
+
+      <!-- Static mode (no Supabase): the original links editor -->
+      <div id="adminStatic">
 
       <!-- ---- Logged out ---- -->
       <div id="adminLogin">
@@ -1045,6 +1062,8 @@
 
       </div>
 
+      </div><!-- /#adminStatic -->
+
     </div>
   </section>
 </section>
@@ -1098,9 +1117,11 @@
   <img class="lightbox__img" id="lightboxImg" alt="Poster, full size">
 </div>
 
-<script src="assets/js/sha256.js?v=7"></script>
-<script src="assets/js/auth-config.js?v=7"></script>
-<script src="assets/js/data.js?v=7"></script>
-<script src="assets/js/app.js?v=7"></script>
+<script src="assets/js/sha256.js?v=8"></script>
+<script src="assets/js/auth-config.js?v=8"></script>
+<script src="assets/js/data.js?v=8"></script>
+<script src="assets/js/supabase-config.js?v=8"></script>
+<script src="assets/js/registrations.js?v=8"></script>
+<script src="assets/js/app.js?v=8"></script>
 </body>
 </html>

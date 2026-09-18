@@ -29,11 +29,23 @@ it runs. Preview with `py -3 -m http.server 8000` if you want it over HTTP.
   upload directly; an unresized phone photo (several MB) baked into every
   visitor's `data.js` load is a real performance problem, not a theoretical
   one.
-- This site has no backend, so registrant sign-up data (name, semester,
-  branch) cannot be collected or viewed on the site itself — see
-  `REGISTRATIONS-GUIDE.md`. Don't quietly reintroduce a server or database for
-  this; that was explicitly removed once already. If the club wants that
-  back, it's a deliberate decision to raise, not a default to reach for.
+- Two modes, picked by `assets/js/supabase-config.js`. Blank = static mode
+  (`app.js` owns everything, links out to Google Forms). Filled = registrations
+  mode (`registrations.js` owns the Registrations page, event pages, and the
+  admin panel; `app.js` just routes to it). Both must keep working — the live
+  site is in static mode until the club configures Supabase. Test both.
+- In registrations mode the page never decides who may do what: Postgres
+  does, through `supabase/schema.sql`. Slots, open/closed, duplicate phone
+  and admin-only access are all enforced there. Don't add client-side checks
+  that pretend to be security; do keep the ones that give a fast, specific
+  error before a round trip.
+- Every registration form asks Full name, Semester and Branch — those three
+  are `FIXED_FIELDS` in `registrations.js` and locked in the builder. Custom
+  answers go in the `data` JSON column; the trio also get real columns so
+  admins can filter and export on them.
+- To test registrations mode without a real project, point the config at the
+  mock in the scratchpad (`mock_supabase2.py`, port 8790) — it enforces the
+  same rules the schema does. Blank the config again before committing.
 - Public site is strictly blue and white. Red and green appear only inside the
   admin panel (destructive actions, success messages).
 

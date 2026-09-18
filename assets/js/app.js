@@ -180,7 +180,7 @@
   /* ---------------------------------------------------------------
      Router
   --------------------------------------------------------------- */
-  var ROUTES = ['home', 'about', 'team', 'hod', 'events', 'register', 'admin'];
+  var ROUTES = ['home', 'about', 'team', 'hod', 'events', 'register', 'event', 'admin'];
 
   /* The admin route is not reachable by typing the URL. It opens only after
      the Ctrl+Shift+A gesture, which sets a flag for this tab. This is
@@ -194,9 +194,16 @@
     try { sessionStorage.setItem(UNLOCK, '1'); } catch (e) { /* noop */ }
   }
 
+  var REG = window.CYZERA_REG || { enabled: false };
+  var routeParam = '';
+
   function routeFromHash() {
     var h = (location.hash || '#/').replace(/^#\/?/, '').split('?')[0];
+    routeParam = '';
     if (h === 'admin' && !adminUnlocked()) return 'home';
+    /* #/register/<event-id> opens one event's page (database mode only) */
+    var m = /^register\/([\w.-]+)$/.exec(h);
+    if (m && REG.enabled) { routeParam = m[1]; return 'event'; }
     return ROUTES.indexOf(h) > -1 ? h : 'home';
   }
 
@@ -215,8 +222,14 @@
     closeMenu();
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
 
-    if (route === 'register') renderPublic();
-    if (route === 'admin') syncAdminUI();
+    if (route === 'register') { if (REG.enabled) REG.renderPublicEvents(); else renderPublic(); }
+    if (route === 'event') REG.renderEventDetail(routeParam);
+    if (route === 'admin') {
+      var staticBox = $('#adminStatic'), sbBox = $('#adminSupabase');
+      if (staticBox) staticBox.hidden = REG.enabled;
+      if (sbBox) sbBox.hidden = !REG.enabled;
+      if (REG.enabled) REG.mountAdmin(); else syncAdminUI();
+    }
 
     var titles = {
       home: 'CYZERA — Innovate | Secure | Evolve',
@@ -225,6 +238,7 @@
       events: 'Our Events — CYZERA',
       hod: "HOD's Message — CYZERA",
       register: 'Registrations — CYZERA',
+      event: 'Register — CYZERA',
       admin: 'Admin — CYZERA'
     };
     document.title = titles[route];
@@ -290,6 +304,7 @@
     if (!io) { targets.forEach(function (t) { t.classList.add('is-in'); }); return; }
     targets.forEach(function (t) { io.observe(t); });
   }
+  window.CYZERA_ARM_REVEALS = armReveals;
 
   /* ---------------------------------------------------------------
      Word-by-word heading reveal
@@ -967,6 +982,6 @@
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
   Store.load()
-    .then(function () { renderPublic(); })
+    .then(function () { if (!REG.enabled) renderPublic(); })
     .then(go);
 })();

@@ -1,31 +1,15 @@
-# Collecting registrations, and getting them into Excel
+# Using Google Forms for registrations
 
-Short version: **use a Google Form for each event, with the fields below.**
-Responses land in a Google Sheet automatically, and Sheets has a built-in
-"Download as Excel" button. That gets you everything asked for — a real
-database of registrants, an admin view of who signed up, and an Excel export
-— with nothing for you to host or maintain.
+The site has its own registration system — forms built in the admin panel,
+registrants stored in a database, a **Download Excel** button — once
+Supabase is connected. That is the recommended route:
+**[SUPABASE-SETUP.md](SUPABASE-SETUP.md)**.
 
----
-
-## Why not a database built into the site?
-
-Worth being upfront about this, because it shapes everything below.
-
-CYZERA is a **static site** — HTML, CSS and JS files with no server. That was
-a deliberate choice made earlier (a server and a custom database were tried
-and then explicitly removed). A static site can display information, but it
-cannot **collect and store data from strangers' browsers** — there is nowhere
-for that data to go. Every visitor's browser is isolated from every other
-visitor's; nothing you type into a page here reaches anyone else unless
-something with a server is standing between you and them.
-
-So "let people register, and let the admin see who registered from any
-device" always needs *something* to hold that shared data. Google's own
-form-and-spreadsheet combo is that something — proven, free, and it already
-does exactly this job for millions of clubs and colleges. This is the same
-reason the site's registration cards have always pointed at `forms.gle`
-links rather than a form built into the page itself.
+This guide is for the other option, which still works in both modes: a
+**Google Form per event**, with responses landing in a Google Sheet. Use it
+if you'd rather not set up Supabase, or for a one-off event someone else is
+running. In registrations mode, paste the form's link into the event's
+"External form instead" box and the Register button goes straight to it.
 
 ---
 
@@ -106,12 +90,8 @@ Duplicate an existing form (⋮ menu → **Make a copy**) instead of starting fr
 scratch — the three fields above stay, you just update the event-specific
 questions and swap the response spreadsheet.
 
-## If you outgrow this
+## Want it inside the site instead?
 
-If the club later wants registrant data to appear *inside* the CYZERA site
-itself — a live admin dashboard on the page, rather than a separate Google
-Sheet — that is possible, but it means bringing back a real backend
-(something like Supabase, which this project has used before). That is a
-different trade-off than the one made when the server was removed, so it is
-worth a deliberate decision rather than something to slide back into. Ask,
-and it can be wired up again.
+That is what registrations mode is: the same three fields, plus anything
+you add, in a form on the event's own page, with every registrant in the
+admin panel and an Excel button. **[SUPABASE-SETUP.md](SUPABASE-SETUP.md)**.

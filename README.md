@@ -3,8 +3,19 @@
 Site for **CYZERA**, the cyber security and digital innovation club of
 Al Azhar College of Engineering and Technology, Thodupuzha, Idukki.
 
-A plain static website. No server to run, no build step, no dependencies —
-just HTML, CSS and JavaScript. Double-click `index.html` and it works.
+A static website — HTML, CSS and JavaScript, hosted on GitHub Pages. It runs
+in one of two modes, chosen by whether `assets/js/supabase-config.js` is
+filled in:
+
+| | **Static mode** (config blank — what's live now) | **Registrations mode** (Supabase connected) |
+|---|---|---|
+| Registrations page | cards linking out to Google Forms | event cards → event page → built-in form |
+| Who registered | in your Google Sheet | in the admin panel, searchable, **Download Excel** |
+| Building a form | in Google Forms | in the admin panel, like Google Forms |
+| Backend | none | Supabase (free tier), which you set up once |
+
+To switch on registrations mode → **[SUPABASE-SETUP.md](SUPABASE-SETUP.md)**.
+About 15 minutes.
 
 ---
 
@@ -59,15 +70,18 @@ yourself. Save, push, done.
 
 ## Collecting registrants (name, semester, branch) and an Excel export
 
-This site is static — it cannot collect submissions from visitors itself,
-because there is no server for that data to land on. The registration links
-above point at **Google Forms**, and that is also where the actual sign-up
-data should be collected: full name, semester, branch, whatever an event
-needs. Google Sheets holds it as a live, shared spreadsheet (this is the
-"database"), and Sheets has a **File → Download → Microsoft Excel** button
-built in — that is the Excel export.
+Two ways, and they can coexist:
 
-Full walkthrough, exact field setup and the branch list →
+**Registrations mode** (recommended) — connect Supabase and every event gets
+its own form built in the admin panel. Every form asks Full name, Semester
+and Branch, plus whatever you add. Registrants appear in the admin panel
+with a **Download Excel** button. The database enforces slots, open/closed
+status and no-duplicate-phone rules itself. See
+**[SUPABASE-SETUP.md](SUPABASE-SETUP.md)**.
+
+**Google Forms** — works in either mode. In static mode it is the only
+option; in registrations mode, paste a Google Forms link into an event's
+"External form instead" box and the Register button goes there. See
 **[REGISTRATIONS-GUIDE.md](REGISTRATIONS-GUIDE.md)**.
 
 ---
@@ -79,18 +93,24 @@ index.html                      all six pages (hash-routed single page)
 favicon.svg                     circuit-C mark
 .nojekyll                       stops GitHub Pages running Jekyll
 assets/css/styles.css           theme, layout, animation
-assets/js/app.js                routing, registration board, admin panel
-assets/js/data.js               the registration links (edit this)
-assets/js/auth-config.js        the admin login hash
-assets/js/sha256.js             hashing for the login check
+assets/js/app.js                routing, static-mode board and admin panel
+assets/js/registrations.js      registrations mode: events, forms, admin, export
+assets/js/supabase-config.js    paste your Supabase URL + anon key to switch modes
+assets/js/data.js               the registration links (static mode)
+assets/js/auth-config.js        the admin login hash (static mode)
+assets/js/sha256.js             hashing for the static-mode login
 assets/img/                     logos and team photos
+supabase/schema.sql             tables, policies, triggers — run once in Supabase
+SUPABASE-SETUP.md               switching on registrations mode
+REGISTRATIONS-GUIDE.md          using Google Forms instead, or alongside
 DEPLOY-GITHUB.md                publishing on GitHub Pages
 ```
 
 ### Pages
 
 `#/` Home · `#/about` About Us · `#/team` Team · `#/hod` HOD's Message ·
-`#/events` Our Events · `#/register` Registrations · `#/admin` Admin *(unlisted, shortcut only)*
+`#/events` Our Events · `#/register` Registrations · `#/register/<event>` one
+event's page *(registrations mode)* · `#/admin` Admin *(unlisted, shortcut only)*
 
 The Team page has five groups: **From the Department** (HOD, Mentor), **The
 people who started CYZERA** (Secretary, Vice President, Treasurer), **The people
@@ -122,7 +142,7 @@ running CYZERA** (Executive Head, Team Coordinator), **Our Media Team**, and
 - The hero and nav mark is the **real circuit-C artwork** with its black ground
   keyed to transparency. The rotating light arc and scan line are `mask-image`d
   to the mark's own alpha, so light falls only on the artwork.
-- `styles.css` and the scripts carry a `?v=7` query. **Bump that number when you
+- `styles.css` and the scripts carry a `?v=8` query. **Bump that number when you
   edit them**, or browsers keep running the previous version after a deploy —
   which looks exactly like a broken site.
 - `prefers-reduced-motion` is respected throughout.

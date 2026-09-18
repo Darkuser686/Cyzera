@@ -1725,3 +1725,204 @@ h1, h2, h3, h4 {
   .nav, .ambience, .scrollbar, .toast { display: none !important; }
   body { background: #fff; color: #000; }
 }
+
+/* =====================================================================
+   Event registrations (database mode) — cards, event page, form,
+   builder, registrants table. Lives at the end so it layers cleanly on
+   top of the base components above.
+   ===================================================================== */
+
+/* ---- event cards ---- */
+.eventgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.4rem;
+}
+
+.eventcard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--ink-2);
+  overflow: hidden;
+  color: inherit;
+  transition: transform .35s var(--ease), border-color .35s var(--ease), box-shadow .35s var(--ease);
+}
+
+.eventcard:hover {
+  transform: translateY(-4px);
+  border-color: var(--line-blue);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .35);
+}
+
+.eventcard.is-closed { opacity: .62; }
+
+.eventcard__poster {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  background: #0e0e11;
+}
+
+.eventcard__poster--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 5rem;
+  font-weight: 700;
+  color: rgba(41, 168, 255, .18);
+  background:
+    radial-gradient(80% 60% at 50% 20%, rgba(41, 168, 255, .16), transparent 60%),
+    #0e0e11;
+}
+
+.eventcard__body { display: flex; flex-direction: column; gap: .5rem; padding: 1.2rem 1.3rem 1.4rem; flex: 1; }
+.eventcard__title { font-size: 1.15rem; }
+.eventcard__when { font-family: var(--font-mono); font-size: .74rem; letter-spacing: .06em; color: var(--blue-soft); }
+.eventcard__cta { margin-top: auto; padding-top: .6rem; font-size: .84rem; font-weight: 600; color: var(--blue-hot); }
+
+.chip--full { border-color: rgba(255, 77, 77, .4); color: #ff8080; background: rgba(255, 77, 77, .08); }
+.chip--draft { border-color: rgba(255, 255, 255, .2); color: var(--fg-dim); }
+
+/* ---- event page ---- */
+.backlink {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: .74rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  margin-bottom: 1.4rem;
+  transition: color .25s var(--ease);
+}
+
+.backlink:hover { color: var(--blue-hot); }
+
+.eventpage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, .9fr);
+  gap: clamp(1.6rem, 4vw, 3rem);
+  align-items: start;
+}
+
+.eventpage__poster {
+  display: block;
+  width: 100%;
+  max-height: 520px;
+  object-fit: cover;
+  border-radius: var(--r-md);
+}
+
+.eventpage__title { font-size: clamp(1.8rem, 4vw, 2.6rem); margin-top: .6rem; }
+.eventpage__desc { margin-top: 1rem; color: var(--fg-mid); font-size: 1.02rem; max-width: 66ch; }
+.eventpage__h2 { font-size: 1.15rem; margin-top: 2rem; }
+
+.rules { margin: .8rem 0 0 1.2rem; padding: 0; color: var(--fg-mid); font-size: .95rem; line-height: 1.7; }
+.rules li { padding-left: .3rem; margin-bottom: .3rem; }
+
+.eventpage__side { position: sticky; top: calc(var(--nav-h) + 1.2rem); display: grid; gap: 1.2rem; }
+
+.details {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.details > div { display: grid; grid-template-columns: 110px 1fr; gap: 1rem; padding: .8rem 1.1rem; background: var(--ink-2); }
+.details dt { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: var(--fg-dim); align-self: center; }
+.details dd { margin: 0; font-size: .95rem; }
+
+@media (max-width: 860px) {
+  .eventpage { grid-template-columns: minmax(0, 1fr); }
+  .eventpage__side { position: static; }
+}
+
+/* ---- registration form ---- */
+.regform .field { margin-bottom: 1.1rem; }
+.req { color: var(--blue-hot); font-style: normal; }
+
+.choices { display: grid; gap: .45rem; margin-top: .5rem; }
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .55rem .8rem;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  background: rgba(0, 0, 0, .3);
+  font-size: .92rem;
+  cursor: pointer;
+  transition: border-color .2s var(--ease), background .2s var(--ease);
+}
+
+.choice:hover { border-color: var(--blue); }
+.choice input { accent-color: var(--blue); width: 16px; height: 16px; margin: 0; }
+.choice:has(input:checked) { border-color: var(--blue); background: rgba(41, 168, 255, .1); }
+
+.regdone { text-align: center; padding: .6rem 0; }
+.regdone__mark {
+  width: 56px; height: 56px; margin: 0 auto .4rem;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: rgba(61, 220, 151, .14);
+  color: var(--ok);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+.regdone p { margin-top: .6rem; color: var(--fg-mid); }
+
+/* ---- form builder (admin) ---- */
+.builder { margin-top: 1.6rem; padding-top: 1.4rem; border-top: 1px solid var(--line); }
+.builder__head { margin-bottom: 1rem; }
+
+.bfield {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: .9rem;
+  align-items: center;
+  padding: .8rem 1rem;
+  margin-bottom: .55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: rgba(0, 0, 0, .25);
+}
+
+.bfield--fixed { border-style: dashed; opacity: .8; }
+.bfield__grip { color: var(--fg-dim); font-size: 1.1rem; }
+.bfield__main { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; font-size: .92rem; }
+.bfield__main b { font-weight: 600; }
+.bfield__opts { width: 100%; font-size: .78rem; color: var(--fg-dim); margin-top: .2rem; }
+
+.builder__add {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-sm);
+}
+
+@media (max-width: 620px) {
+  .bfield { grid-template-columns: auto 1fr; }
+  .bfield .admin-row__actions { grid-column: 1 / -1; }
+}
+
+/* ---- registrants table (admin) ---- */
+.tablewrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--ink-2);
+}
+
+.regtable { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.regtable th, .regtable td { padding: .65rem .85rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.regtable th { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; color: var(--blue-soft); background: rgba(0, 0, 0, .3); position: sticky; top: 0; }
+.regtable tbody tr:hover { background: rgba(41, 168, 255, .05); }
+.regtable td:nth-child(3) { font-weight: 600; white-space: normal; min-width: 140px; }
