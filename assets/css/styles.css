@@ -1970,3 +1970,35 @@ h1, h2, h3, h4 {
 @media (max-width: 480px) {
   .paybox { flex-direction: column; text-align: center; }
 }
+
+/* ---- branch manager (admin settings) ---- */
+.branchlist { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+.branchchip {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .4rem .5rem .4rem .8rem;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .3);
+  font-size: .88rem;
+}
+
+.branchchip__x {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  color: var(--fg-mid);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s var(--ease), color .2s var(--ease);
+}
+
+.branchchip__x:hover { background: var(--danger); color: #fff; }

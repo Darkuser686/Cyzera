@@ -63,13 +63,19 @@
      The three questions every form asks. Locked in the builder.
   --------------------------------------------------------------- */
   var SEMESTERS = ['1', '2', '3', '4', '5', '6', '7', '8'];
+  /* Default branches, used offline and until the live list loads. Once an
+     admin edits branches they live in the database (see db.branches); this
+     array is kept in sync so every dropdown reflects the current set. */
   var BRANCHES = ['CSE', 'AI & ML', 'Cyber Security', 'Mechanical', 'Electrical', 'Bio Medical'];
 
-  var FIXED_FIELDS = [
-    { key: 'full_name', label: 'Full name', type: 'text', required: true, fixed: true },
-    { key: 'semester', label: 'Semester', type: 'select', required: true, fixed: true, options: SEMESTERS },
-    { key: 'branch', label: 'Branch', type: 'select', required: true, fixed: true, options: BRANCHES }
-  ];
+  function fixedFields() {
+    return [
+      { key: 'full_name', label: 'Full name', type: 'text', required: true, fixed: true },
+      { key: 'semester', label: 'Semester', type: 'select', required: true, fixed: true, options: SEMESTERS },
+      { key: 'branch', label: 'Branch', type: 'select', required: true, fixed: true, options: BRANCHES.slice() }
+    ];
+  }
+  var FIXED_FIELDS = fixedFields();
 
   var FIELD_TYPES = [
     ['text', 'Short answer'],
@@ -248,8 +254,31 @@
     },
     isAdmin: function () {
       return call('/rest/v1/admins?select=user_id&limit=1').then(function (r) { return !!(r && r.length); });
+    },
+    branches: function () {
+      return call('/rest/v1/branches?select=name&order=sort_order.asc,name.asc')
+        .then(function (r) { return (r || []).map(function (b) { return b.name; }); });
+    },
+    addBranch: function (name, order) {
+      return call('/rest/v1/branches', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ name: name, sort_order: order }])
+      });
+    },
+    deleteBranch: function (name) {
+      return call('/rest/v1/branches?name=eq.' + encodeURIComponent(name), { method: 'DELETE' });
     }
   };
+
+  /* Pull the live branch list into BRANCHES so every dropdown is current.
+     Falls back silently to the defaults if the call fails. */
+  function refreshBranches() {
+    return db.branches().then(function (list) {
+      if (list && list.length) { BRANCHES.length = 0; list.forEach(function (b) { BRANCHES.push(b); }); }
+      return BRANCHES;
+    }).catch(function () { return BRANCHES; });
+  }
 
   var auth = {
     session: function () { return sess ? { name: sess.email } : null; },
@@ -327,7 +356,10 @@
   function readImageFile(file, maxW) {
     return new Promise(function (resolve, reject) {
       if (!file) { resolve(''); return; }
-      if (!/^image\//.test(file.type)) { reject(new Error('That is not an image file.')); return; }
+      if (!/^image\/(png|jpe?g)$/i.test(file.type)) {
+        reject(new Error('Please upload a PNG or JPG image. (An iPhone photo may be HEIC — take a screenshot instead, or pick a JPG.)'));
+        return;
+      }
       if (file.size > 8 * 1024 * 1024) { reject(new Error('That image is larger than 8 MB — pick a smaller one.')); return; }
       var reader = new FileReader();
       reader.onerror = function () { reject(new Error('Could not read that file.')); };
@@ -386,7 +418,7 @@
      by the builder's live preview alike, so the two never drift.
   --------------------------------------------------------------- */
   function allFields(ev) {
-    return FIXED_FIELDS.concat(cleanFields(ev.fields));
+    return fixedFields().concat(cleanFields(ev.fields));
   }
 
   function fieldHtml(f, idx) {
@@ -514,7 +546,7 @@
     if (!host) return Promise.resolve();
     host.innerHTML = '<div class="empty"><p>Loading…</p></div>';
 
-    return Promise.all([db.event(id), db.counts()]).then(function (r) {
+    return Promise.all([db.event(id), db.counts(), refreshBranches()]).then(function (r) {
       var ev = r[0];
       var counts = r[1];
       if (!ev || ev.status === 'draft') {
@@ -566,7 +598,7 @@
             '<label class="field"><span class="field__label">Payment screenshot <i class="req" aria-hidden="true">*</i></span>' +
               '<div class="poster-field">' +
                 '<div class="poster-preview" id="qProofPreview" hidden><img id="qProofImg" alt="Payment screenshot preview"><button class="poster-preview__remove" type="button" id="qProofRemove" aria-label="Remove">&times;</button></div>' +
-                '<label class="poster-drop" id="qProofDrop"><input type="file" id="qProof" accept="image/*" hidden><span class="poster-drop__icon" aria-hidden="true">&#8593;</span><span class="poster-drop__text">Upload your payment screenshot<br><small>JPG or PNG</small></span></label>' +
+                '<label class="poster-drop" id="qProofDrop"><input type="file" id="qProof" accept="image/png,image/jpeg" hidden><span class="poster-drop__icon" aria-hidden="true">&#8593;</span><span class="poster-drop__text">Upload your payment screenshot<br><small>JPG or PNG</small></span></label>' +
                 '<button class="btn btn--sm" type="button" id="qOcr" hidden style="margin-top:.6rem"><span>Auto-read transaction id from screenshot</span></button>' +
                 '<div id="qProofAlert"></div>' +
               '</div></label>';
@@ -786,6 +818,7 @@
         });
       });
       renderSettings();
+      refreshBranches();
       return loadAdminEvents();
     });
   }
@@ -916,7 +949,7 @@
         '<label class="field"><span class="field__label">Poster</span>' +
           '<div class="poster-field">' +
             '<div class="poster-preview" id="ePosterPreview" ' + (posterData ? '' : 'hidden') + '><img id="ePosterImg" src="' + esc(posterData) + '" alt=""><button class="poster-preview__remove" type="button" id="ePosterRemove" aria-label="Remove poster">&times;</button></div>' +
-            '<label class="poster-drop" id="ePosterDrop" ' + (posterData ? 'hidden' : '') + '><input type="file" id="ePoster" accept="image/*" hidden><span class="poster-drop__icon" aria-hidden="true">&#8593;</span><span class="poster-drop__text">Click to upload a poster<br><small>JPG or PNG, resized automatically</small></span></label>' +
+            '<label class="poster-drop" id="ePosterDrop" ' + (posterData ? 'hidden' : '') + '><input type="file" id="ePoster" accept="image/png,image/jpeg" hidden><span class="poster-drop__icon" aria-hidden="true">&#8593;</span><span class="poster-drop__text">Click to upload a poster<br><small>JPG or PNG, resized automatically</small></span></label>' +
             '<div id="ePosterAlert"></div>' +
           '</div></label>' +
         '<label class="field"><span class="field__label">External form instead <span style="text-transform:none;letter-spacing:0">(optional — a Google Forms link; leave blank to use the built-in form below)</span></span>' +
@@ -928,7 +961,7 @@
             '<label class="field"><span class="field__label">Payment QR code <span style="text-transform:none;letter-spacing:0">(the image people scan to pay)</span></span>' +
               '<div class="poster-field">' +
                 '<div class="poster-preview poster-preview--qr" id="eQrPreview" ' + (qrData ? '' : 'hidden') + '><img id="eQrImg" src="' + esc(qrData) + '" alt=""><button class="poster-preview__remove" type="button" id="eQrRemove" aria-label="Remove QR">&times;</button></div>' +
-                '<label class="poster-drop" id="eQrDrop" ' + (qrData ? 'hidden' : '') + '><input type="file" id="eQr" accept="image/*" hidden><span class="poster-drop__icon" aria-hidden="true">&#8593;</span><span class="poster-drop__text">Click to upload the payment QR<br><small>JPG or PNG</small></span></label>' +
+                '<label class="poster-drop" id="eQrDrop" ' + (qrData ? 'hidden' : '') + '><input type="file" id="eQr" accept="image/png,image/jpeg" hidden><span class="poster-drop__icon" aria-hidden="true">&#8593;</span><span class="poster-drop__text">Click to upload the payment QR<br><small>JPG or PNG</small></span></label>' +
                 '<div id="eQrAlert"></div>' +
               '</div></label>' +
             '<label class="field"><span class="field__label">Payment instruction <span style="text-transform:none;letter-spacing:0">(shown under the QR, optional)</span></span>' +
@@ -1317,6 +1350,27 @@
   }
 
   /* ---- settings ---- */
+  function renderBranchList() {
+    var host = $('#brList');
+    if (!host) return;
+    if (!BRANCHES.length) { host.innerHTML = '<p class="hint">No branches yet — add the first one below.</p>'; return; }
+    host.innerHTML = BRANCHES.map(function (b) {
+      return '<span class="branchchip">' + esc(b) +
+        '<button type="button" class="branchchip__x" data-branch="' + esc(b) + '" aria-label="Remove ' + esc(b) + '">&times;</button></span>';
+    }).join('');
+  }
+
+  document.addEventListener('click', function (e) {
+    var x = e.target.closest('#brList [data-branch]');
+    if (!x) return;
+    var name = x.getAttribute('data-branch');
+    if (!confirm('Remove the branch "' + name + '"? People already registered under it are not affected, but it will no longer be offered.')) return;
+    db.deleteBranch(name).then(function () {
+      alertInto($('#brAlert'), 'ok', '');
+      return refreshBranches().then(renderBranchList);
+    }).catch(function (err) { alertInto($('#brAlert'), 'err', err.message); });
+  });
+
   function renderSettings() {
     var host = $('#sbSettings');
     if (!host) return;
@@ -1331,8 +1385,35 @@
         '<button class="btn btn--primary" type="submit"><span>Change password</span></button>' +
       '</form>' +
       '<hr class="rule" style="margin:2rem 0">' +
+      '<h3 style="font-size:1.15rem">Branches</h3>' +
+      '<p class="hint" style="margin-bottom:1rem">The branch dropdown every registrant picks from. Add or remove branches here — changes apply to every form at once.</p>' +
+      '<div id="brAlert"></div>' +
+      '<div class="branchlist" id="brList"></div>' +
+      '<form id="brForm" style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">' +
+        '<input class="input" id="brNew" placeholder="New branch, e.g. Civil" style="flex:1;min-width:200px">' +
+        '<button class="btn btn--sm btn--primary" type="submit"><span>+ Add branch</span></button>' +
+      '</form>' +
+      '<hr class="rule" style="margin:2rem 0">' +
       '<h3 style="font-size:1.15rem">How this is protected</h3>' +
       '<p class="hint">Sign-in happens on Supabase, not in this page. Every event you save and every registrant you read is checked by the database against its row-level security policies, so tampering with the page in devtools gets an attacker nowhere. Only accounts in the <code>admins</code> table can do any of this, and only the Supabase SQL editor can add one. Visitors can do exactly one thing: submit a registration to an open event.</p>';
+
+    renderBranchList();
+    $('#brForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = $('#brNew').value.trim();
+      if (!name) return;
+      if (BRANCHES.some(function (b) { return b.toLowerCase() === name.toLowerCase(); })) {
+        alertInto($('#brAlert'), 'err', 'That branch already exists.'); return;
+      }
+      var btn = e.target.querySelector('button[type=submit]');
+      btn.disabled = true;
+      db.addBranch(name, BRANCHES.length).then(function () {
+        $('#brNew').value = '';
+        alertInto($('#brAlert'), 'ok', '');
+        return refreshBranches().then(renderBranchList);
+      }).catch(function (err) { alertInto($('#brAlert'), 'err', err.message); })
+        .then(function () { btn.disabled = false; });
+    });
 
     $('#sbPwForm').addEventListener('submit', function (e) {
       e.preventDefault();

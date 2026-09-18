@@ -295,3 +295,74 @@ $$;
 drop policy if exists "admins update registrations" on public.registrations;
 create policy "admins update registrations" on public.registrations
   for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+
+-- =====================================================================
+-- 8. Editable branches (migration — safe to re-run)
+--
+--   The branch list is no longer hard-coded. Admins add and remove branches
+--   in the panel; this table holds them. The old fixed CHECK on
+--   registrations.branch is dropped, and the guard trigger instead checks the
+--   submitted branch against this table — so a made-up branch is still refused,
+--   but the allowed set is yours to change.
+-- =====================================================================
+create table if not exists public.branches (
+  name       text primary key,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+-- Seed the original six only if the table is empty.
+insert into public.branches (name, sort_order)
+select * from (values
+  ('CSE', 0), ('AI & ML', 1), ('Cyber Security', 2),
+  ('Mechanical', 3), ('Electrical', 4), ('Bio Medical', 5)
+) as seed(name, sort_order)
+where not exists (select 1 from public.branches);
+
+alter table public.branches enable row level security;
+drop policy if exists "branches readable by everyone" on public.branches;
+drop policy if exists "admins manage branches"        on public.branches;
+create policy "branches readable by everyone" on public.branches
+  for select to anon, authenticated using (true);
+create policy "admins manage branches" on public.branches
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- Drop the fixed branch check; the trigger below now validates instead.
+alter table public.registrations drop constraint if exists registrations_branch;
+
+-- Rebuild the guard to also confirm the branch is one that currently exists.
+create or replace function public.guard_registration()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  ev public.events%rowtype;
+  taken bigint;
+begin
+  select * into ev from public.events where id = new.event_id;
+  if not found then
+    raise exception 'That event does not exist.' using errcode = 'P0002';
+  end if;
+  if ev.status <> 'open' then
+    raise exception 'Registrations for this event are closed.' using errcode = 'P0001';
+  end if;
+  if ev.external_url <> '' then
+    raise exception 'This event registers through an external form.' using errcode = 'P0001';
+  end if;
+  if ev.slots is not null then
+    select count(*) into taken from public.registrations where event_id = new.event_id;
+    if taken >= ev.slots then
+      raise exception 'No slots left for this event.' using errcode = 'P0001';
+    end if;
+  end if;
+  if ev.payment_required and coalesce(new.txn_id, '') = '' then
+    raise exception 'This event needs payment — enter your transaction id.' using errcode = 'P0001';
+  end if;
+  if not exists (select 1 from public.branches b where b.name = new.branch) then
+    raise exception 'Unknown branch.' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;

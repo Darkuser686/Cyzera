@@ -22,7 +22,8 @@ Until you do this the site keeps working exactly as it does now.
 [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
 
 > **Already ran an earlier version?** The schema now also adds payment columns
-> (event QR, and each registration's transaction id + screenshot). Just paste
+> (event QR, each registration's transaction id + screenshot, and an editable
+> branch list). Just paste
 > the whole file and Run again — it is written to be safe to re-run; the
 > `alter table ... add column if not exists` lines add what's missing and
 > leave your data alone.
@@ -121,7 +122,10 @@ column. Columns are the three fixed questions plus whatever that event
 asked. **Download Excel** gives a real `.xlsx`; **CSV** if you prefer.
 Delete a row with ✕.
 
-**Settings** — change your password.
+**Settings** — change your password, and **manage branches**: the branch
+dropdown every registrant picks from. Add one (e.g. Civil) or remove one; it
+updates every form at once. A registration can only use a branch that exists,
+enforced by the database.
 
 ## Charging for an event
 
