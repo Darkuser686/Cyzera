@@ -89,6 +89,7 @@
       event: String(f.event || ''),
       description: String(f.description || ''),
       url: normaliseUrl(f.url) || '',
+      poster: String(f.poster || ''),
       deadline: String(f.deadline || ''),
       status: f.status === 'open' ? 'open' : 'closed'
     };
@@ -428,8 +429,15 @@
         ? '<a class="btn btn--primary" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer"><span>Open form ↗</span></a>'
         : '<button class="btn" disabled><span>' + (live ? 'Coming soon' : 'Closed') + '</span></button>';
 
+      var poster = f.poster
+        ? '<button type="button" class="formcard__poster-btn" data-poster-src="' + esc(f.poster) + '">' +
+            '<img class="formcard__poster" src="' + esc(f.poster) + '" alt="' + esc(f.title) + ' poster" loading="lazy">' +
+          '</button>'
+        : '';
+
       return '' +
         '<article class="formcard reveal' + (usable ? '' : ' is-closed') + '" style="--delay:' + (i * 70) + 'ms">' +
+          poster +
           '<div>' +
             '<div class="formcard__meta">' + chips + '</div>' +
             '<h3 class="formcard__title">' + esc(f.title) + '</h3>' +
@@ -511,6 +519,33 @@
     });
   });
 
+  /* ---- Poster lightbox ---- */
+  var lightbox = $('#posterLightbox');
+  var lightboxImg = $('#lightboxImg');
+
+  function closeLightbox() {
+    if (!lightbox) return;
+    lightbox.hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('click', function (e) {
+    var trigger = e.target.closest('[data-poster-src]');
+    if (trigger) {
+      lightboxImg.src = trigger.getAttribute('data-poster-src');
+      lightbox.hidden = false;
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+    if (lightbox && !lightbox.hidden && (e.target === lightbox || e.target.closest('#lightboxClose'))) {
+      closeLightbox();
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeLightbox();
+  });
+
   /* ---- List ---- */
   function renderAdminList() {
     var host = $('#adminList');
@@ -523,8 +558,13 @@
 
     host.innerHTML = forms.map(function (f, i) {
       var live = f.status === 'open';
+      var thumb = f.poster
+        ? '<img class="admin-row__poster" src="' + esc(f.poster) + '" alt="">'
+        : '<span class="admin-row__poster admin-row__poster--empty">No poster</span>';
+
       return '' +
         '<div class="admin-row" data-id="' + esc(f.id) + '">' +
+          thumb +
           '<div>' +
             '<div class="formcard__meta">' +
               (live ? '<span class="chip chip--live">Open</span>' : '<span class="chip">Closed</span>') +
@@ -606,6 +646,89 @@
     });
   }
 
+  /* ---------------------------------------------------------------
+     Poster upload
+
+     No server, so a poster becomes a data: URL baked straight into the
+     record. Resized on a canvas and re-encoded as JPEG so one photo from a
+     phone (4-8 MB) turns into a card image of a few hundred KB rather than
+     bloating localStorage and the exported data.js.
+  --------------------------------------------------------------- */
+  var posterDataUrl = '';
+  var MAX_POSTER_W = 1000;
+  var MAX_POSTER_BYTES = 8 * 1024 * 1024;
+
+  function readPosterFile(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file) { resolve(''); return; }
+      if (!/^image\//.test(file.type)) { reject(new Error('That is not an image file.')); return; }
+      if (file.size > MAX_POSTER_BYTES) { reject(new Error('That image is larger than 8 MB \u2014 pick a smaller one.')); return; }
+
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error('Could not read that file.')); };
+      reader.onload = function () {
+        var img = new Image();
+        img.onerror = function () { reject(new Error('Could not read that image.')); };
+        img.onload = function () {
+          var scale = Math.min(1, MAX_POSTER_W / img.naturalWidth);
+          var w = Math.max(1, Math.round(img.naturalWidth * scale));
+          var h = Math.max(1, Math.round(img.naturalHeight * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          try {
+            resolve(canvas.toDataURL('image/jpeg', 0.78));
+          } catch (e) {
+            reject(new Error('Could not process that image.'));
+          }
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function setPosterPreview(dataUrl) {
+    posterDataUrl = dataUrl || '';
+    var box = $('#posterPreview');
+    var img = $('#posterPreviewImg');
+    var drop = $('#posterDrop');
+    if (posterDataUrl) {
+      img.src = posterDataUrl;
+      box.hidden = false;
+      if (drop) drop.hidden = true;
+    } else {
+      img.src = '';
+      box.hidden = true;
+      if (drop) drop.hidden = false;
+    }
+  }
+
+  var posterInput = $('#fPoster');
+  if (posterInput) {
+    posterInput.addEventListener('change', function () {
+      var file = posterInput.files && posterInput.files[0];
+      posterInput.value = '';
+      if (!file) return;
+      alertInto($('#posterAlert'), 'info', 'Reading image\u2026');
+      readPosterFile(file).then(function (dataUrl) {
+        alertInto($('#posterAlert'), 'ok', '');
+        setPosterPreview(dataUrl);
+      }).catch(function (err) {
+        alertInto($('#posterAlert'), 'err', err.message);
+      });
+    });
+  }
+
+  var removePosterBtn = $('#removePoster');
+  if (removePosterBtn) {
+    removePosterBtn.addEventListener('click', function () {
+      setPosterPreview('');
+      alertInto($('#posterAlert'), 'info', '');
+    });
+  }
+
   /* ---- Editor ---- */
   var editor = $('#formEditor');
 
@@ -617,6 +740,7 @@
     $('#fDesc').value = f.description || '';
     $('#fDeadline').value = f.deadline || '';
     $('#fStatus').value = f.status === 'open' ? 'open' : 'closed';
+    setPosterPreview(f.poster || '');
 
     $('#editorHeading').textContent = 'Edit link';
     $('#saveBtn').querySelector('span').textContent = 'Save changes';
@@ -634,6 +758,8 @@
     $('#saveBtn').querySelector('span').textContent = 'Publish link';
     $('#cancelEdit').hidden = true;
     alertInto($('#editorAlert'), 'info', '');
+    setPosterPreview('');
+    alertInto($('#posterAlert'), 'info', '');
   }
 
   var cancelEdit = $('#cancelEdit');
@@ -667,6 +793,7 @@
         event: $('#fEvent').value.trim(),
         description: $('#fDesc').value.trim(),
         url: url,
+        poster: posterDataUrl || '',
         deadline: $('#fDeadline').value || '',
         status: $('#fStatus').value === 'open' ? 'open' : 'closed'
       };

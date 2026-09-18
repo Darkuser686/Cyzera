@@ -24,6 +24,16 @@ it runs. Preview with `py -3 -m http.server 8000` if you want it over HTTP.
 - The admin login check runs in the browser, so it is a courtesy barrier, not
   security. Never put a plaintext password in any committed file — only the
   SHA-256 hash in `auth-config.js`.
+- Poster images go through `readPosterFile()` in `app.js` — always resized on
+  a canvas and re-encoded as JPEG before being stored. Never store a raw
+  upload directly; an unresized phone photo (several MB) baked into every
+  visitor's `data.js` load is a real performance problem, not a theoretical
+  one.
+- This site has no backend, so registrant sign-up data (name, semester,
+  branch) cannot be collected or viewed on the site itself — see
+  `REGISTRATIONS-GUIDE.md`. Don't quietly reintroduce a server or database for
+  this; that was explicitly removed once already. If the club wants that
+  back, it's a deliberate decision to raise, not a default to reach for.
 - Public site is strictly blue and white. Red and green appear only inside the
   admin panel (destructive actions, success messages).
 

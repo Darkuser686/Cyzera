@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="assets/css/styles.css?v=6">
+<link rel="stylesheet" href="assets/css/styles.css?v=7">
 </head>
 
 <body>
@@ -912,6 +912,22 @@
               </label>
 
               <label class="field">
+                <span class="field__label">Poster image <span style="text-transform:none;letter-spacing:0">(optional — shown at the top of the card)</span></span>
+                <div class="poster-field" id="posterField">
+                  <div class="poster-preview" id="posterPreview" hidden>
+                    <img id="posterPreviewImg" alt="Poster preview">
+                    <button class="poster-preview__remove" type="button" id="removePoster" aria-label="Remove poster">&times;</button>
+                  </div>
+                  <label class="poster-drop" id="posterDrop">
+                    <input type="file" id="fPoster" accept="image/*" hidden>
+                    <span class="poster-drop__icon" aria-hidden="true">&#8593;</span>
+                    <span class="poster-drop__text">Click to upload a poster<br><small>JPG or PNG, resized automatically</small></span>
+                  </label>
+                  <div id="posterAlert"></div>
+                </div>
+              </label>
+
+              <label class="field">
                 <span class="field__label">Description</span>
                 <textarea class="textarea" id="fDesc" placeholder="Who it is for, team size, anything a student should know before clicking."></textarea>
               </label>
@@ -1077,10 +1093,14 @@
 </footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="lightbox" id="posterLightbox" hidden>
+  <button class="lightbox__close" id="lightboxClose" aria-label="Close">&times;</button>
+  <img class="lightbox__img" id="lightboxImg" alt="Poster, full size">
+</div>
 
-<script src="assets/js/sha256.js?v=6"></script>
-<script src="assets/js/auth-config.js?v=6"></script>
-<script src="assets/js/data.js?v=6"></script>
-<script src="assets/js/app.js?v=6"></script>
+<script src="assets/js/sha256.js?v=7"></script>
+<script src="assets/js/auth-config.js?v=7"></script>
+<script src="assets/js/data.js?v=7"></script>
+<script src="assets/js/app.js?v=7"></script>
 </body>
 </html>

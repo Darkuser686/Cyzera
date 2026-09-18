@@ -1217,6 +1217,29 @@ h1, h2, h3, h4 {
 .formcard:hover { border-color: var(--line-blue); transform: translateY(-3px); }
 .formcard.is-closed { opacity: .58; }
 
+.formcard__poster-btn {
+  grid-column: 1 / -1;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  cursor: zoom-in;
+  background: #0e0e11;
+  line-height: 0;
+}
+
+.formcard__poster {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  transition: transform .4s var(--ease);
+}
+
+.formcard__poster-btn:hover .formcard__poster { transform: scale(1.03); }
+
 .formcard__meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
 .formcard__title { font-size: 1.1rem; }
 .formcard__desc { margin-top: .5rem; color: var(--fg-mid); font-size: .9rem; max-width: 62ch; }
@@ -1322,7 +1345,7 @@ h1, h2, h3, h4 {
 
 .admin-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: 1rem;
   align-items: start;
   padding: 1.15rem 1.3rem;
@@ -1346,7 +1369,8 @@ h1, h2, h3, h4 {
 .admin-row__actions { display: flex; flex-wrap: wrap; gap: .4rem; }
 
 @media (max-width: 620px) {
-  .admin-row { grid-template-columns: 1fr; }
+  .admin-row { grid-template-columns: auto 1fr; }
+  .admin-row__actions { grid-column: 1 / -1; }
 }
 
 .tabs { display: flex; gap: .35rem; margin-bottom: 1.6rem; border-bottom: 1px solid var(--line); }
@@ -1397,6 +1421,122 @@ h1, h2, h3, h4 {
 }
 
 .hint { font-size: .82rem; color: var(--fg-dim); margin-top: .6rem; line-height: 1.6; }
+
+/* ---- Poster upload (admin editor) ---- */
+.poster-field { display: block; }
+
+.poster-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: 1.6rem 1rem;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-sm);
+  background: rgba(0, 0, 0, .25);
+  color: var(--fg-dim);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s var(--ease), background .2s var(--ease);
+}
+
+.poster-drop:hover { border-color: var(--blue); background: rgba(0, 0, 0, .4); }
+.poster-drop__icon { font-size: 1.3rem; color: var(--blue-soft); }
+.poster-drop__text { font-size: .82rem; line-height: 1.5; }
+.poster-drop__text small { color: var(--fg-dim); font-size: .74rem; }
+
+.poster-preview {
+  position: relative;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  background: #0e0e11;
+  line-height: 0;
+}
+
+.poster-preview img { display: block; width: 100%; max-height: 220px; object-fit: cover; }
+
+.poster-preview__remove {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(5, 7, 13, .78);
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s var(--ease);
+}
+
+.poster-preview__remove:hover { background: var(--danger); }
+
+/* ---- Poster thumbnail in the admin form list ---- */
+.admin-row__poster {
+  width: 56px;
+  height: 70px;
+  flex: none;
+  border-radius: var(--r-sm);
+  object-fit: cover;
+  background: #0e0e11;
+  border: 1px solid var(--line-2);
+}
+
+.admin-row__poster--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .6rem;
+  text-align: center;
+  color: var(--fg-dim);
+  padding: .2rem;
+}
+
+/* ---- Poster lightbox ---- */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.2rem, 5vw, 3rem);
+  background: rgba(5, 7, 13, .92);
+  backdrop-filter: blur(6px);
+  cursor: zoom-out;
+}
+
+.lightbox__img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--r-md);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+  cursor: default;
+}
+
+.lightbox__close {
+  position: absolute;
+  top: clamp(.8rem, 3vw, 1.6rem);
+  right: clamp(.8rem, 3vw, 1.6rem);
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  background: rgba(5, 7, 13, .6);
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightbox__close:hover { border-color: var(--blue); color: var(--blue-hot); }
 
 /* Live password-rule checklist in Admin -> Settings. */
 .pwrules {

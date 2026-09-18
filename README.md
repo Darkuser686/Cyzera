@@ -19,8 +19,11 @@ this repository** — only a SHA-256 hash of it lives in
 password. Ask whoever set the site up, or reset it from **Settings**.
 
 Sign in and you can add, edit, reorder, open/close and delete registration
-links. Changes are live in that browser straight away. To publish them to
-everyone: **Publish → Download data.js**, replace `assets/js/data.js`, push.
+links, each with an optional **poster image** (upload a JPG or PNG — it is
+resized and compressed automatically, then click the poster on the public
+page to see it full size). Changes are live in that browser straight away.
+To publish them to everyone: **Publish → Download data.js**, replace
+`assets/js/data.js`, push.
 
 To change the login, use **Settings** — it generates a hash line to paste into
 `assets/js/auth-config.js`.
@@ -48,7 +51,24 @@ Open `assets/js/data.js` and edit the list:
 ```
 
 A link shows as **open** only when `status` is `'open'` **and** `url` is a real
-`https://` address. Save, push, done.
+`https://` address. `poster` is optional — a `data:` URL (what the admin panel
+writes) or a path like `assets/img/posters/name.jpg` if you add the file
+yourself. Save, push, done.
+
+---
+
+## Collecting registrants (name, semester, branch) and an Excel export
+
+This site is static — it cannot collect submissions from visitors itself,
+because there is no server for that data to land on. The registration links
+above point at **Google Forms**, and that is also where the actual sign-up
+data should be collected: full name, semester, branch, whatever an event
+needs. Google Sheets holds it as a live, shared spreadsheet (this is the
+"database"), and Sheets has a **File → Download → Microsoft Excel** button
+built in — that is the Excel export.
+
+Full walkthrough, exact field setup and the branch list →
+**[REGISTRATIONS-GUIDE.md](REGISTRATIONS-GUIDE.md)**.
 
 ---
 
@@ -81,6 +101,12 @@ running CYZERA** (Executive Head, Team Coordinator), **Our Media Team**, and
 
 ## Notes
 
+- **Registration cards can carry a poster image**, uploaded in the admin
+  editor as a plain file — no server involved. It is downscaled to a max
+  width of 1000px and re-encoded as JPEG on a `<canvas>` before being stored,
+  so a multi-megabyte phone photo becomes a card image of a few hundred KB
+  rather than bloating `localStorage` or the exported `data.js`. Click a
+  poster on the Registrations page to see it full size.
 - **Team photo files are the originals, byte-for-byte.** Each card is a fixed
   4:5 frame and the photo fills it edge to edge (`object-fit: cover`), so cards
   line up with no blank bands and every subject is centred. Only the *framing*
@@ -96,7 +122,7 @@ running CYZERA** (Executive Head, Team Coordinator), **Our Media Team**, and
 - The hero and nav mark is the **real circuit-C artwork** with its black ground
   keyed to transparency. The rotating light arc and scan line are `mask-image`d
   to the mark's own alpha, so light falls only on the artwork.
-- `styles.css` and the scripts carry a `?v=6` query. **Bump that number when you
+- `styles.css` and the scripts carry a `?v=7` query. **Bump that number when you
   edit them**, or browsers keep running the previous version after a deploy —
   which looks exactly like a broken site.
 - `prefers-reduced-motion` is respected throughout.
