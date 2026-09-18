@@ -21,6 +21,12 @@ Until you do this the site keeps working exactly as it does now.
 **SQL Editor → New query** → paste the whole of
 [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
 
+> **Already ran an earlier version?** The schema now also adds payment columns
+> (event QR, and each registration's transaction id + screenshot). Just paste
+> the whole file and Run again — it is written to be safe to re-run; the
+> `alter table ... add column if not exists` lines add what's missing and
+> leave your data alone.
+
 That creates three tables and locks them down:
 
 | Who | Can see events | Can register | Can build events | Can see who registered |
@@ -116,6 +122,24 @@ asked. **Download Excel** gives a real `.xlsx`; **CSV** if you prefer.
 Delete a row with ✕.
 
 **Settings** — change your password.
+
+## Charging for an event
+
+In the event editor, tick **This event needs payment**. Then:
+
+- Upload the **payment QR code** people scan to pay (your UPI/GPay QR image).
+- Optionally add a one-line **payment instruction**.
+
+On that event's page, everyone registering now sees the QR, and must enter
+their **transaction / UTR id** and upload a **payment screenshot** before they
+can submit. Both are stored. In **Registrations** you get two extra columns —
+the transaction id, and a **View** button that opens the screenshot — and both
+are included in the Excel/CSV export.
+
+A note on the "auto-read the screenshot" button on the payer's form: it is a
+convenience that tries to read the id off the image, but it is not reliable
+across the many payment apps, so the **typed transaction id is the record**.
+Always glance at the screenshot (the View button) if a number looks off.
 
 ## What is and isn't protected
 

@@ -1928,3 +1928,45 @@ h1, h2, h3, h4 {
 .regtable th { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; color: var(--blue-soft); background: rgba(0, 0, 0, .3); position: sticky; top: 0; }
 .regtable tbody tr:hover { background: rgba(41, 168, 255, .05); }
 .regtable td:nth-child(3) { font-weight: 600; white-space: normal; min-width: 140px; }
+
+/* ---- payment: QR box on the event page, upload preview in admin ---- */
+.paysection {
+  margin-top: 1.4rem;
+  padding: 1.2rem;
+  border: 1px solid var(--line-blue);
+  border-radius: var(--r-md);
+  background: rgba(41, 168, 255, .05);
+}
+
+.paybox {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  margin-bottom: 1.2rem;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  background: rgba(0, 0, 0, .3);
+}
+
+.paybox__qr {
+  flex: none;
+  width: 120px;
+  height: 120px;
+  padding: 6px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: #fff;
+  cursor: zoom-in;
+  line-height: 0;
+}
+
+.paybox__qr img { width: 100%; height: 100%; object-fit: contain; }
+.paybox__body b { display: block; margin-bottom: .3rem; }
+.paybox__body p { font-size: .88rem; color: var(--fg-mid); margin: 0; }
+
+.poster-preview--qr img { max-height: 200px; object-fit: contain; background: #fff; }
+
+@media (max-width: 480px) {
+  .paybox { flex-direction: column; text-align: center; }
+}

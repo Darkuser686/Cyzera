@@ -232,9 +232,16 @@
       });
     },
     registrations: function (eventId) {
-      var q = '/rest/v1/registrations?select=*&order=created_at.asc';
+      /* Everything except payment_proof — that data URL can be hundreds of KB
+         per row, so it is fetched one at a time only when an admin opens it. */
+      var cols = 'id,event_id,full_name,semester,branch,email,phone,txn_id,data,created_at';
+      var q = '/rest/v1/registrations?select=' + cols + '&order=created_at.asc';
       if (eventId) q += '&event_id=eq.' + encodeURIComponent(eventId);
       return call(q).then(function (r) { return r || []; });
+    },
+    proof: function (id) {
+      return call('/rest/v1/registrations?id=eq.' + encodeURIComponent(id) + '&select=payment_proof&limit=1')
+        .then(function (r) { return (r && r[0] && r[0].payment_proof) || ''; });
     },
     deleteRegistration: function (id) {
       return call('/rest/v1/registrations?id=eq.' + encodeURIComponent(id), { method: 'DELETE' });
@@ -340,6 +347,37 @@
         img.src = reader.result;
       };
       reader.readAsDataURL(file);
+    });
+  }
+
+  /* ---------------------------------------------------------------
+     Best-effort OCR of a payment screenshot. Loads Tesseract.js only when
+     someone actually taps the button. Returns the longest run of digits it
+     finds (a UPI UTR is 12 digits), which the payer then confirms. This is a
+     convenience, never the record — the typed transaction id is.
+  --------------------------------------------------------------- */
+  var tesseract = null;
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    if (tesseract) return tesseract;
+    tesseract = new Promise(function (resolve, reject) {
+      var el = document.createElement('script');
+      el.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js';
+      el.onload = function () { window.Tesseract ? resolve(window.Tesseract) : reject(new Error('no Tesseract')); };
+      el.onerror = function () { tesseract = null; reject(new Error('load failed')); };
+      document.head.appendChild(el);
+    });
+    return tesseract;
+  }
+
+  function ocrTransactionId(dataUrl) {
+    return loadTesseract().then(function (T) {
+      return T.recognize(dataUrl, 'eng').then(function (res) {
+        var text = (res && res.data && res.data.text) || '';
+        var runs = text.replace(/[^0-9]+/g, ' ').split(' ').filter(function (x) { return x.length >= 10; });
+        runs.sort(function (a, b) { return b.length - a.length; });
+        return runs[0] || '';
+      });
     });
   }
 
@@ -510,10 +548,34 @@
           '<p class="hint">Opens the registration form in a new tab.</p>';
       } else {
         var fields = allFields(ev);
+        var payBlock = '';
+        if (ev.payment_required) {
+          payBlock =
+            '<div class="paybox">' +
+              (ev.payment_qr
+                ? '<button type="button" class="paybox__qr" data-poster-src="' + esc(ev.payment_qr) + '"><img src="' + esc(ev.payment_qr) + '" alt="Payment QR code"></button>'
+                : '') +
+              '<div class="paybox__body">' +
+                '<b>Payment required' + (ev.fee ? ' — ' + esc(ev.fee) : '') + '</b>' +
+                (ev.payment_note ? '<p>' + esc(ev.payment_note) + '</p>' : '<p>Scan the code to pay, then enter your transaction id and upload the screenshot below.</p>') +
+              '</div>' +
+            '</div>' +
+            '<label class="field"><span class="field__label">Transaction / UTR id <i class="req" aria-hidden="true">*</i></span>' +
+              '<input class="input" id="qTxn" name="txn_id" required placeholder="e.g. 4521 8890 1234">' +
+              '<span class="hint" style="margin-top:.35rem;display:block">Copy it from your payment app. This is what goes in our records.</span></label>' +
+            '<label class="field"><span class="field__label">Payment screenshot <i class="req" aria-hidden="true">*</i></span>' +
+              '<div class="poster-field">' +
+                '<div class="poster-preview" id="qProofPreview" hidden><img id="qProofImg" alt="Payment screenshot preview"><button class="poster-preview__remove" type="button" id="qProofRemove" aria-label="Remove">&times;</button></div>' +
+                '<label class="poster-drop" id="qProofDrop"><input type="file" id="qProof" accept="image/*" hidden><span class="poster-drop__icon" aria-hidden="true">&#8593;</span><span class="poster-drop__text">Upload your payment screenshot<br><small>JPG or PNG</small></span></label>' +
+                '<button class="btn btn--sm" type="button" id="qOcr" hidden style="margin-top:.6rem"><span>Auto-read transaction id from screenshot</span></button>' +
+                '<div id="qProofAlert"></div>' +
+              '</div></label>';
+        }
         formHtml =
           '<form class="regform" id="regForm" autocomplete="on" novalidate>' +
             '<div id="regAlert"></div>' +
             fields.map(fieldHtml).join('') +
+            payBlock +
             '<button class="btn btn--primary" type="submit" id="regSubmit" style="width:100%"><span>Register</span></button>' +
             '<p class="hint">Your details go straight to the CYZERA team and nowhere else.</p>' +
           '</form>';
@@ -541,12 +603,59 @@
 
       var form = $('#regForm');
       if (!form) return;
+
+      var proofData = '';
+      if (ev.payment_required) {
+        $('#qProof').addEventListener('change', function () {
+          var file = this.files && this.files[0];
+          this.value = '';
+          if (!file) return;
+          alertInto($('#qProofAlert'), 'info', 'Reading image…');
+          readImageFile(file, 1100).then(function (d) {
+            proofData = d;
+            $('#qProofImg').src = d;
+            $('#qProofPreview').hidden = false;
+            $('#qProofDrop').hidden = true;
+            $('#qOcr').hidden = false;
+            alertInto($('#qProofAlert'), 'info', '');
+          }).catch(function (err) { alertInto($('#qProofAlert'), 'err', err.message); });
+        });
+        $('#qProofRemove').addEventListener('click', function () {
+          proofData = '';
+          $('#qProofImg').src = '';
+          $('#qProofPreview').hidden = true;
+          $('#qProofDrop').hidden = false;
+          $('#qOcr').hidden = true;
+        });
+        $('#qOcr').addEventListener('click', function () {
+          if (!proofData) return;
+          var b = this; b.disabled = true; b.querySelector('span').textContent = 'Reading… (may take a moment)';
+          ocrTransactionId(proofData).then(function (guess) {
+            if (guess) {
+              $('#qTxn').value = guess;
+              alertInto($('#qProofAlert'), 'ok', 'Read a transaction id — please check it matches your screenshot.');
+            } else {
+              alertInto($('#qProofAlert'), 'err', 'Could not read an id. Please type it in yourself.');
+            }
+          }).catch(function () {
+            alertInto($('#qProofAlert'), 'err', 'Auto-read is unavailable. Please type the id in.');
+          }).then(function () { b.disabled = false; b.querySelector('span').textContent = 'Auto-read transaction id from screenshot'; });
+        });
+      }
+
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         var res = readForm(form, allFields(ev));
         if (res.problems.length) {
           alertInto($('#regAlert'), 'err', res.problems[0]);
           return;
+        }
+        var txn = '', proof = '';
+        if (ev.payment_required) {
+          txn = $('#qTxn').value.trim();
+          proof = proofData;
+          if (!txn) { alertInto($('#regAlert'), 'err', 'Enter your payment transaction id.'); return; }
+          if (!proof) { alertInto($('#regAlert'), 'err', 'Upload your payment screenshot.'); return; }
         }
         var a = res.answers;
         var row = {
@@ -556,6 +665,8 @@
           branch: a.branch,
           email: a.email || null,
           phone: a.phone || null,
+          txn_id: txn || null,
+          payment_proof: proof || null,
           data: a
         };
         var btn = $('#regSubmit');
@@ -591,6 +702,7 @@
   var builderFields = [];      // custom fields being edited
   var editingId = '';
   var posterData = '';
+  var qrData = '';
 
   function adminShell() {
     return '' +
@@ -770,6 +882,7 @@
     editingId = ev ? ev.id : '';
     builderFields = ev ? cleanFields(ev.fields) : [{ key: 'phone', label: 'Phone number', type: 'tel', required: true }];
     posterData = ev ? (ev.poster || '') : '';
+    qrData = ev ? (ev.payment_qr || '') : '';
 
     host.innerHTML = '' +
       '<h3 style="font-size:1.15rem" id="sbEditorHeading">' + (ev ? 'Edit event' : 'Create an event') + '</h3>' +
@@ -808,6 +921,21 @@
           '</div></label>' +
         '<label class="field"><span class="field__label">External form instead <span style="text-transform:none;letter-spacing:0">(optional — a Google Forms link; leave blank to use the built-in form below)</span></span>' +
           '<input class="input" id="eExt" type="text" inputmode="url" spellcheck="false" placeholder="https://forms.gle/…" value="' + esc(ev ? ev.external_url : '') + '"></label>' +
+
+        '<div class="paysection">' +
+          '<label class="choice" style="margin-bottom:1rem"><input type="checkbox" id="ePayReq" ' + (ev && ev.payment_required ? 'checked' : '') + '><span>This event needs payment</span></label>' +
+          '<div id="ePayFields" ' + (ev && ev.payment_required ? '' : 'hidden') + '>' +
+            '<label class="field"><span class="field__label">Payment QR code <span style="text-transform:none;letter-spacing:0">(the image people scan to pay)</span></span>' +
+              '<div class="poster-field">' +
+                '<div class="poster-preview poster-preview--qr" id="eQrPreview" ' + (qrData ? '' : 'hidden') + '><img id="eQrImg" src="' + esc(qrData) + '" alt=""><button class="poster-preview__remove" type="button" id="eQrRemove" aria-label="Remove QR">&times;</button></div>' +
+                '<label class="poster-drop" id="eQrDrop" ' + (qrData ? 'hidden' : '') + '><input type="file" id="eQr" accept="image/*" hidden><span class="poster-drop__icon" aria-hidden="true">&#8593;</span><span class="poster-drop__text">Click to upload the payment QR<br><small>JPG or PNG</small></span></label>' +
+                '<div id="eQrAlert"></div>' +
+              '</div></label>' +
+            '<label class="field"><span class="field__label">Payment instruction <span style="text-transform:none;letter-spacing:0">(shown under the QR, optional)</span></span>' +
+              '<input class="input" id="ePayNote" placeholder="Pay ₹150, then upload the screenshot below." value="' + esc(ev ? (ev.payment_note || '') : '') + '"></label>' +
+            '<p class="hint" style="margin-top:.4rem">People registering will see the QR, and must enter their transaction id and upload a payment screenshot. Both appear in the registrants table and the Excel export.</p>' +
+          '</div>' +
+        '</div>' +
 
         '<div class="builder" id="builder">' +
           '<div class="builder__head"><h3 style="font-size:1.05rem">Questions on the form</h3><p class="hint" style="margin:0">The first three are asked on every form and cannot be removed.</p></div>' +
@@ -857,6 +985,27 @@
       $('#ePosterDrop').hidden = false;
     });
 
+    $('#ePayReq').addEventListener('change', function () { $('#ePayFields').hidden = !this.checked; });
+    $('#eQr').addEventListener('change', function () {
+      var file = this.files && this.files[0];
+      this.value = '';
+      if (!file) return;
+      alertInto($('#eQrAlert'), 'info', 'Reading image…');
+      readImageFile(file, 700).then(function (d) {
+        qrData = d;
+        $('#eQrImg').src = d;
+        $('#eQrPreview').hidden = false;
+        $('#eQrDrop').hidden = true;
+        alertInto($('#eQrAlert'), 'ok', '');
+      }).catch(function (err) { alertInto($('#eQrAlert'), 'err', err.message); });
+    });
+    $('#eQrRemove').addEventListener('click', function () {
+      qrData = '';
+      $('#eQrImg').src = '';
+      $('#eQrPreview').hidden = true;
+      $('#eQrDrop').hidden = false;
+    });
+
     if ($('#eCancel')) $('#eCancel').addEventListener('click', function () { renderEditor(null); });
 
     $('#sbEventForm').addEventListener('submit', function (e) {
@@ -883,6 +1032,9 @@
         slots: slots ? Math.max(1, parseInt(slots, 10) || 1) : null,
         status: $('#eStatus').value,
         external_url: ext,
+        payment_required: $('#ePayReq').checked,
+        payment_qr: $('#ePayReq').checked ? (qrData || '') : '',
+        payment_note: $('#ePayReq').checked ? $('#ePayNote').value.trim() : '',
         fields: cleanFields(builderFields),
         sort_order: editingId ? (adminEvents.filter(function (x) { return x.id === editingId; })[0] || {}).sort_order || 0 : adminEvents.length
       };
@@ -1025,21 +1177,33 @@
     return v == null ? '' : String(v);
   }
 
+  function anyPayment() {
+    return adminEvents.some(function (ev) {
+      if (regsEvent && ev.id !== regsEvent) return false;
+      return ev.payment_required;
+    });
+  }
+
   function regsMatrix() {
     var cols = regsColumns();
     var titleOf = {};
     adminEvents.forEach(function (ev) { titleOf[ev.id] = ev.title; });
-    var head = ['#', 'Event', 'Full name', 'Semester', 'Branch'].concat(cols.map(function (c) { return c.label; })).concat(['Registered at']);
+    var pay = anyPayment();
+    var head = ['#', 'Event', 'Full name', 'Semester', 'Branch']
+      .concat(cols.map(function (c) { return c.label; }))
+      .concat(pay ? ['Transaction id', 'Proof'] : [])
+      .concat(['Registered at']);
     var q = ($('#rSearch') ? $('#rSearch').value : '').trim().toLowerCase();
     var body = [];
     regsRows.forEach(function (r, i) {
       var row = [i + 1, titleOf[r.event_id] || r.event_id, r.full_name, r.semester, r.branch]
         .concat(cols.map(function (c) { return cell((r.data || {})[c.key]); }))
+        .concat(pay ? [r.txn_id || '', r.txn_id ? 'submitted' : ''] : [])
         .concat([fmtWhen(r.created_at)]);
       if (q && row.join(' ').toLowerCase().indexOf(q) === -1) return;
-      body.push({ id: r.id, cells: row });
+      body.push({ id: r.id, cells: row, hasProof: !!r.txn_id, proofCol: pay ? row.length - 2 : -1 });
     });
-    return { head: head, body: body };
+    return { head: head, body: body, pay: pay };
   }
 
   function paintRegsTable() {
@@ -1055,12 +1219,29 @@
     tbl.innerHTML =
       '<thead><tr>' + m.head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '<th></th></tr></thead>' +
       '<tbody>' + m.body.map(function (r) {
-        return '<tr data-rid="' + esc(r.id) + '">' + r.cells.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') +
+        return '<tr data-rid="' + esc(r.id) + '">' + r.cells.map(function (c, ci) {
+          if (ci === r.proofCol && r.hasProof) {
+            return '<td><button class="btn btn--sm" data-proof><span>View</span></button></td>';
+          }
+          return '<td>' + esc(c) + '</td>';
+        }).join('') +
           '<td><button class="btn btn--sm btn--danger" data-rdel><span>✕</span></button></td></tr>';
       }).join('') + '</tbody>';
   }
 
   document.addEventListener('click', function (e) {
+    var view = e.target.closest('#rTable [data-proof]');
+    if (view) {
+      var rid = view.closest('tr').dataset.rid;
+      var lb = $('#posterLightbox'), img = $('#lightboxImg');
+      view.disabled = true; view.querySelector('span').textContent = '…';
+      db.proof(rid).then(function (src) {
+        view.disabled = false; view.querySelector('span').textContent = 'View';
+        if (!src) { toast('No screenshot stored for this one.'); return; }
+        img.src = src; lb.hidden = false; document.body.style.overflow = 'hidden';
+      }).catch(function (err) { view.disabled = false; view.querySelector('span').textContent = 'View'; toast(err.message); });
+      return;
+    }
     var btn = e.target.closest('#rTable [data-rdel]');
     if (!btn) return;
     var tr = btn.closest('tr');

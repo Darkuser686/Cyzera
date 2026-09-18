@@ -236,3 +236,62 @@ select * from (values
      {"key":"email","label":"Email","type":"email","required":true}]'::jsonb)
 ) as seed(id, title, department, category, description, status, sort_order, fields)
 where not exists (select 1 from public.events);
+
+
+-- =====================================================================
+-- 7. Payments (migration — safe to run on an existing database)
+--
+--   Per event: whether payment is required, the QR image to pay to, and a
+--   short instruction line. Per registration: the transaction/UTR id the
+--   payer typed, and their payment screenshot (a compressed data URL).
+--
+--   The screenshot is a big text value, so it is NEVER selected in the
+--   registrant *list* — only fetched one at a time when an admin opens it.
+-- =====================================================================
+alter table public.events add column if not exists payment_required boolean not null default false;
+alter table public.events add column if not exists payment_qr       text    not null default '';
+alter table public.events add column if not exists payment_note      text    not null default '';
+
+alter table public.registrations add column if not exists txn_id         text;
+alter table public.registrations add column if not exists payment_proof  text;
+
+-- When an event needs payment, the registration must carry a transaction id.
+-- Enforced in the same trigger that checks slots and open/closed, so a direct
+-- API call cannot skip it. Re-create the guard with the extra check.
+create or replace function public.guard_registration()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  ev public.events%rowtype;
+  taken bigint;
+begin
+  select * into ev from public.events where id = new.event_id;
+  if not found then
+    raise exception 'That event does not exist.' using errcode = 'P0002';
+  end if;
+  if ev.status <> 'open' then
+    raise exception 'Registrations for this event are closed.' using errcode = 'P0001';
+  end if;
+  if ev.external_url <> '' then
+    raise exception 'This event registers through an external form.' using errcode = 'P0001';
+  end if;
+  if ev.slots is not null then
+    select count(*) into taken from public.registrations where event_id = new.event_id;
+    if taken >= ev.slots then
+      raise exception 'No slots left for this event.' using errcode = 'P0001';
+    end if;
+  end if;
+  if ev.payment_required and coalesce(new.txn_id, '') = '' then
+    raise exception 'This event needs payment — enter your transaction id.' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+-- Admins may correct a saved registration (e.g. mark a txn id verified). The
+-- earlier schema granted admins select/delete on registrations but not update.
+drop policy if exists "admins update registrations" on public.registrations;
+create policy "admins update registrations" on public.registrations
+  for update to authenticated using (public.is_admin()) with check (public.is_admin());
