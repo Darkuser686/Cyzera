@@ -523,8 +523,7 @@
         '<a class="backlink" href="#/register">← All events</a>' +
         '<div class="eventpage">' +
           '<div class="eventpage__main">' +
-            (ev.poster ? '<button type="button" class="formcard__poster-btn" data-poster-src="' + esc(ev.poster) + '"><img class="eventpage__poster" src="' + esc(ev.poster) + '" alt="' + esc(ev.title) + ' poster"></button>' : '') +
-            '<div class="formcard__meta" style="margin-top:1.2rem">' +
+            '<div class="formcard__meta">' +
               (ev.department ? '<span class="chip chip--blue">' + esc(ev.department) + '</span>' : '') +
               '<span class="chip">' + esc(ev.category) + '</span>' +
               statusChip(ev, counts) +
